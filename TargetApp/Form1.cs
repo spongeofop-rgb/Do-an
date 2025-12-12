@@ -17,7 +17,7 @@ namespace TargetApp
     public partial class Form1 : Form
     {
         // --- CẤU HÌNH ---
-        const string HOST_IP = "127.0.0.1";
+        const string HOST_IP = "26.201.85.236";
         const int HOST_PORT = 9999;
 
         TcpClient client;
