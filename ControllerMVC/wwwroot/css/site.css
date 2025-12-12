@@ -1,0 +1,55 @@
+﻿html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+/* CSS cho khung chứa webcam */
+#webcam-container {
+    width: 100%; /* Rộng hết cỡ theo cột của nó */
+    height: 480px; /* Chiều cao cố định */
+    background-color: #000; /* Màu đen */
+    position: relative; /* Để căn giữa chữ chờ */
+    overflow: hidden; /* Ẩn những phần ảnh bị thừa ra ngoài */
+    border: 3px solid #333; /* Viền cho đẹp */
+}
+
+/* CSS QUAN TRỌNG NHẤT CHO ẢNH */
+#webcam-feed {
+    width: 100%; /* Rộng bằng khung chứa */
+    height: 100%; /* Cao bằng khung chứa */
+    /* Chọn 1 trong 2 kiểu "vừa in" sau: */
+    /* KIỂU 1 (Khuyên dùng): Lấp đầy khung, giữ tỉ lệ, cắt bớt phần thừa */
+    object-fit: cover;
+    /* KIỂU 2: Kéo giãn ảnh để vừa khít, NHƯNG HÌNH SẼ BỊ MÉO */
+    /* object-fit: fill; */
+
+    display: none; /* Mặc định ẩn */
+}
+
+/* CSS để căn giữa dòng chữ chờ */
+#camStatus {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #888;
+    text-align: center;
+    font-weight: bold;
+}

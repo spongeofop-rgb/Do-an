@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
-// --- NHỚ KIỂM TRA TÊN NAMESPACE CỦA BẠN ---
 namespace Server_controller
 {
     public partial class Form1 : Form

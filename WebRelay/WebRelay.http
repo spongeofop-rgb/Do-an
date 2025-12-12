@@ -1,0 +1,6 @@
+@WebRelay_HostAddress = http://localhost:5106
+
+GET {{WebRelay_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
