@@ -5,8 +5,6 @@ VisualStudioVersion = 17.14.36804.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TargetApp", "TargetApp.csproj", "{99258A41-AA5E-401D-BC21-8FF7B0423C62}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server controller", "..\Server controller\Server controller.csproj", "{68ADCBDE-9B82-4244-81A4-8B093D27ED40}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebRelay", "..\WebRelay\WebRelay.csproj", "{253C66E4-9C70-4666-B084-B1EF82A7AA14}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ControllerMVC", "..\ControllerMVC\ControllerMVC.csproj", "{F235F6BA-AC42-4A96-96C5-69E6A07C0CC5}"
@@ -21,10 +19,6 @@ Global
 		{99258A41-AA5E-401D-BC21-8FF7B0423C62}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{99258A41-AA5E-401D-BC21-8FF7B0423C62}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{99258A41-AA5E-401D-BC21-8FF7B0423C62}.Release|Any CPU.Build.0 = Release|Any CPU
-		{68ADCBDE-9B82-4244-81A4-8B093D27ED40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{68ADCBDE-9B82-4244-81A4-8B093D27ED40}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{68ADCBDE-9B82-4244-81A4-8B093D27ED40}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{68ADCBDE-9B82-4244-81A4-8B093D27ED40}.Release|Any CPU.Build.0 = Release|Any CPU
 		{253C66E4-9C70-4666-B084-B1EF82A7AA14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{253C66E4-9C70-4666-B084-B1EF82A7AA14}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{253C66E4-9C70-4666-B084-B1EF82A7AA14}.Release|Any CPU.ActiveCfg = Release|Any CPU
