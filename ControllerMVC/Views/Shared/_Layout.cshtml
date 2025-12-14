@@ -3,16 +3,54 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ControllerMVC</title>
+    <title>@ViewData["Title"] - RAT Controller</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/ControllerMVC.styles.css" asp-append-version="true" />
+
+    <style>
+        /* --- GIAO DIỆN DARK MODE TOÀN TẬP --- */
+        body {
+            background-color: #0d0d0d;
+            color: #c0c0c0;
+            font-family: 'Consolas', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Thêm font Consolas cho ngầu */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background-color: #000 !important;
+            border-bottom: 1px solid #333;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .footer {
+            background-color: #000 !important;
+            border-top: 1px solid #333;
+            color: #666;
+            margin-top: auto; /* Đẩy footer xuống đáy */
+            padding: 10px 0;
+        }
+
+        /* Chỉnh màu link cho dễ nhìn trên nền đen */
+        a.text-dark {
+            color: #ccc !important;
+        }
+
+            a.text-dark:hover {
+                color: #fff !important;
+                text-decoration: none;
+            }
+    </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">ControllerMVC</a>
+                <a class="navbar-brand fw-bold text-success" style="letter-spacing: 2px;" asp-area="" asp-controller="Home" asp-action="Index">
+                    👾 RAT CONTROL V8
+                </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -20,30 +58,33 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            <a class="nav-link text-light" asp-area="" asp-controller="Home" asp-action="Index">Dashboard</a>
                         </li>
                     </ul>
+                    <span class="navbar-text text-secondary small">
+                        Running on: @Environment.MachineName
+                    </span>
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
+
+    <div class="container-fluid">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - ControllerMVC - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <footer class="footer text-muted">
+        <div class="container-fluid text-center">
+            <small>&copy; 2025 - RAT Controller - <span class="text-success">System Online 🟢</span></small>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

