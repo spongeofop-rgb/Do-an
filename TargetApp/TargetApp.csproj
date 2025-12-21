@@ -6,11 +6,20 @@
     <Nullable>disable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>image_2025-12-20_174617971.ico</ApplicationIcon>
+    <AssemblyName>10 Điểm OOP</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="image_2025-12-20_174617971.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AForge.Video" Version="2.2.5" />
     <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="System.IO.Compression" Version="4.3.0" />
+    <PackageReference Include="System.Management" Version="10.0.1" />
   </ItemGroup>
 
 </Project>
